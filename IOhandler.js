@@ -38,18 +38,35 @@ const unzip = (pathIn, pathOut) => {
  * @return {promise}
  */
 const readDir = dir => {
-
-  fs.readFile('./elisa',(err,data) => {
-    const newArr = [];
+  const newArr = [];
+  return new Promise((resolve,reject) => {
+  fs.readdir(dir,(err,files) => {
+    
     if (err) {
-      return err
+      reject(err)
     } else {
-      newArr.push(data)
+      for (let file of files) {
+        if(file.includes("png")) {
+      newArr.push(file)
+     
+        }
+        
+      }
+      console.log(newArr)
     }
-      return newArr
-  })
-
+      resolve(newArr);
+      
+  });
+ 
+});
 };
+
+readDir("./elisa").then(files => {
+  for(const f of files) {
+    grayScale(f, `./grayscaled/${f}`)
+  }
+
+})
 
 /**
  * Description: Read in png file by given pathIn, 
@@ -60,6 +77,29 @@ const readDir = dir => {
  * @return {promise}
  */
 const grayScale = (pathIn, pathOut) => {
+  fs.createReadStream(`./elisa/${pathIn}`)
+  .pipe(
+    new PNG({
+      filterType: 4,
+    })
+  )
+  .on("parsed", function () {
+    for (var y = 0; y < this.height; y++) {
+      for (var x = 0; x < this.width; x++) {
+        var idx = (this.width * y + x) << 2;
+        var grayscale = (this.data[idx] +this.data[idx + 1] + this.data[idx + 2] ) /3;
+        // invert color
+        this.data[idx] = grayscale;
+        this.data[idx + 1] = grayscale;
+        this.data[idx + 2] = grayscale;
+ 
+        // and reduce opacity
+        this.data[idx + 3] = this.data[idx + 3] >> 1;
+      }
+    }
+ 
+    this.pack().pipe(fs.createWriteStream(pathOut));
+  });
 
 };
 
